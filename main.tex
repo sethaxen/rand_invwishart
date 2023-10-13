@@ -1,0 +1,135 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{authblk}
+
+\newcommand{\Wish}{\text{Wishart}}
+\newcommand{\InvWish}{\text{Inv-Wishart}}
+
+\title{Efficiently sampling from the Inverse-Wishart distribution}
+\author[1]{Seth D. Axen}
+\affil[1]{ML Colab}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present an efficient approach for sampling matrices from the inverse-Wishart distribution.
+The best available approach uses the Bartlett decomposition to sample the Cholesky factor of a Wishart-distributed matrix, and then perform a triangular solve to construct a square root (but not Cholesky) decomposition of an inverse-Wishart distributed matrix.
+% this requires a less common/useful parameterization?
+Our approach, which resembles the Bartlett decomposition, requires the same number of operations as the current best approach, but constructs the Cholesky factorization of a inverse-Wishart distributed matrix, which is often more useful for subsequent operations.
+\end{abstract}
+
+\section{Introduction}
+
+% relevance of inverse-wishart distribution
+
+% notation and definition of Wishart distribution
+
+% notation and definition of inverse-wishart distribution
+
+% utility of Cholesky factorization
+
+\section{Previous approaches}
+
+% Bartlett decomposition
+
+% sampling by inverting a Wishart (requires O(n^3) matrix inversion)
+
+% O(n^2) using triangular solve
+
+% if Cholesky factor is needed, requires O(n^3) Cholesky solve
+
+\section{An efficient approach}
+
+As far as I can tell, the usual procedure for sampling from the inverse Wishart distribution is to first sample from the Wishart distribution using the Bartlett distribution and then invert the matrix using the Cholesky decomposition.
+Here I show that the inverse Wishart distribution has a very similar decomposition to the Bartlett decomposition that allows us to draw from the inverse Wishart distribution (or from the distribution of its Cholesky factor) without a Cholesky factorization.
+
+The density of the inverse Wishart distribution is
+\begin{align*}
+    \InvWish(W \mid \nu, S) &\propto |W|^{-(\nu+K+1)/2}\exp\left(-\frac{1}{2}\operatorname{tr}(S W^{-1})\right)\\
+    &= |L_W|^{-(\nu+K+1)}\exp\left(-\frac{1}{2}\lVert L_W^{-1} L_S\rVert^2\right)
+\end{align*}
+
+Let
+\begin{align*}
+f(L_W) &= W = L_W L_W^\top\\
+W_{ij} &= \sum_{k=1}^K (L_W)_{ik} (L_W)_{jk} = \sum_{k=\max(i,j)}^K (L_W)_{ik} (L_W)_{jk}\\
+\end{align*}
+
+Each element $W_{ij}$ is dependent only on elements of $(L_W)_{ij}$ above and to the left of $L_{ij}$, inclusive.
+As a result, the Jacobian of $f$ is triangular, and its determinant is the product of its diagonal elements,
+
+\begin{align*}
+\mathrm{d}W_{ij} &= \begin{cases}
+    (L_W)_{jj} \mathrm{d}(L_W)_{ij} + \ldots & i > j\\
+    2(L_W)_{jj} \mathrm{d}(L_W)_{jj} & i = j
+\end{cases}\\
+J_f &= \prod_{j=1}^K 2(L_W)_{jj} \prod_{i=j}^K (L_W)_{jj} = 2^K \prod_{j=1}^K (L_W)_{jj}^{K-j+1},
+\end{align*}
+
+so
+\[
+    \mathrm{InvWishartCholesky}(L_W \mid \nu, L_S) = \exp\left(-\frac{1}{2}\lVert L_W^{-1} L_S\rVert^2\right) \prod_{j=1}^K (L_W)_{jj}^{-(\nu + j)}
+\]
+
+Let $L_W = g(T) = T^{-1}$, and let $T = h(Z) = Z L_S^{-1}$.
+$T$ and $Z$ are also valid lower Cholesky factors, and we can compute the Jacobians of these transformations.
+
+\begin{align*}
+    \mathrm{d}L_W &= -T^{-1} \mathrm{d}T T^{-1} = -L_W \mathrm{d}T L_W\\
+    (\mathrm{d}L_W)_{ij} &= -\sum_{k=1}^K \sum_{l=1}^K (L_W)_{ik} (\mathrm{d}T)_{kl} (L_W)_{lj} \\
+    &= -\sum_{k=1}^i \sum_{l=j}^k (L_W)_{ik} (L_W)_{lj} (\mathrm{d}T)_{kl}
+\end{align*}
+
+Here again $(\mathrm{d}W)_{ij}$ only depends on elements above and to the right of $(\mathrm{d}T)_{ij}$, so the Jacobian is triangular, and its determinant depends only on the diagonal elements:
+
+\begin{align*}
+    (\mathrm{d}W)_{ij} &= -(L_W)_{ii} (L_W)_{jj} (\mathrm{d}T)_{ij}\\
+    |J_g| &= \prod_{j=1}^K \prod_{i=j}^K (L_W)_{ii} (L_W)_{jj} = \prod_{j=1}^K (L_W)_{jj}^{K+1} \\
+    &= |L_W|^{K+1} = |T|^{-(K+1)}
+\end{align*}
+
+
+Then the final Jacobian
+
+\begin{align*}
+    \mathrm{d}T &= \mathrm{d}Z L_S^{-1}\\
+    (\mathrm{d}T)_{ij} &= \sum_{k=1}^K (\mathrm{d}Z)_{ik} (L_S^{-1})_{kj} = \sum_{k=j}^i (L_S^{-1})_{kj} (\mathrm{d}Z)_{ik}
+\end{align*}
+
+Each $(\mathrm{d}T)_{ij}$ is only dependent on elements in $(\mathrm{d}Z)$ in row $i$ to the right of and including $(\mathrm{d}Z)_{ij}$.
+A simple permutation of elements in the vectorization is able to triangularize the Jacobian, and we can write its determinant as
+
+\begin{align*}
+    (\mathrm{d}T)_{ij} &= \sum_{k=1}^K (\mathrm{d}Z)_{ik} (L_S^{-1})_{kj} = (L_S^{-1})_{jj} (\mathrm{d}Z)_{ij} + \ldots\\
+    |J_h| &= \prod_{j=1}^K \prod_{i=j}^K (L_S^{-1})_{jj} = \prod_{j=1}^K (L_S^{-1})_{jj}^{K-j+1} = \prod_{j=1}^K (L_S)_{jj}^{-(K-j+1)}
+\end{align*}
+
+
+Then
+
+\begin{align*}
+    p(Z \mid \nu, L_S) &\doteq \mathrm{InvWishartCholesky}(L_S Z^{-1} \mid \nu, L_S) |J_g| |J_h|\\
+    &\propto \exp\left(-\frac{1}{2}\lVert Z\rVert^2\right) \prod_{j=1}^K (L_W)_{jj}^{K + 1 - \nu - j} (L_S)_{jj}^{-(K-j+1)}\\
+    &\propto \prod_{j=1}^K Z_{jj}^{\nu-K + j - 1} \prod_{i=j}^K e^{-Z_{ij}^2/2}\\
+\end{align*}
+
+We can then draw from $\mathrm{InvWishartCholesky}(L_W \mid \nu, L_S)$ and $\InvWish(W \mid \nu, S)$:
+\[
+    Z_{ij} \sim \begin{cases} \chi_{\nu-K+i} & i = j\\ \mathcal{N}(0, 1) & i > j \end{cases} \qquad L_W = L_S Z^{-1} \qquad W = L_W L_W^\top\\
+\]
+
+Compare this with the Bartlett decomposition for $\Wish(W \mid \nu, S)$:
+\[
+    Z_{ij} \sim \begin{cases} \chi_{\nu+1-i} & i = j\\ \mathcal{N}(0, 1) & i > j \end{cases} \qquad L_W = L_S Z \qquad W = L_W L_W^\top\\
+\]
+
+and
+
+\[
+    Z_{ij} \sim \begin{cases} \chi_{\nu+1-i} & i = j\\ \mathcal{N}(0, 1) & i > j \end{cases} \qquad L_W = L_S Z^{-1} \qquad W = L_W L_W^\top\\
+\]
+
+\end{document}
