@@ -15,7 +15,6 @@
 \usepackage{booktabs}
 
 % add bibliography
-
 \usepackage[style=authoryear-comp,backend=biber,giveninits=true,uniquename=init,maxbibnames=10,sorting=nyt,sortcites=no]{biblatex}
 \addbibresource{references.bib}
 
@@ -41,7 +40,7 @@
 
 \begin{document}
 
-\title{Efficiently generating inverse-Wishart matrices and their Cholesky factors}
+\title[Efficiently generating inverse-Wishart matrices]{Efficiently generating inverse-Wishart matrices and their Cholesky factors}
 \author{Seth D. Axen}
 \address{University of Tübingen, Germany}
 \email{seth@sethaxen.com}
@@ -52,8 +51,6 @@
 \end{abstract}
 
 \maketitle
-
-% [TODO: write up and run benchmarks, perhaps move proofs to an appendix.]
 
 \section{Introduction}
 
@@ -110,15 +107,15 @@ While the two parameterizations are equivalent, the choice of parameterization c
 
 \subsection*{Summary of contributions}
 
-This paper's main contribution is \Cref{algrandcholinvwishart} for efficiently generating a random Cholesky factor of a inverse-Wishart matrix without performing a Cholesky factorization.
-\Cref{algrandinvwishartdirect} uses this algorithm to efficiently generate an inverse-Wishart matrix.
+This paper's main contribution is \Cref{alg:rinvwishartchol} for efficiently generating a random Cholesky factor of a inverse-Wishart matrix without performing a Cholesky factorization.
+\Cref{alg:rinvwishartdirect} uses this algorithm to efficiently generate an inverse-Wishart matrix.
 In \Cref{algcomp} we compare the new and standard algorithm and recommend which to use depending on the parameterization of the inverse-Wishart distribution.
 
 \section{The Cholesky parameterizations of the Wishart and inverse-Wishart distributions}
 
-It is frequently more convenient to work with Cholesky factors of Wishart- and inverse-Wishart-distributed matrices, since from such factors, the matrix inverse and determinant are easily computed.
-For example, if using the inverse-Wishart distribution as a prior for a covariance matrix in a Bayesian setting, computing the density of the multivariate normal would generally require this Cholesky factor.
-Thus, it is useful to define the distributions obtained when the Wishart and inverse-Wishart distributions are parameterized in terms of their Cholesky factors.
+It is frequently more convenient to work with Cholesky factors of Wishart- and inverse-Wishart-distributed matrices than the matrices themselves, since from such factors, the matrix inverse and determinant are easily computed.
+For example, if the inverse-Wishart distribution is used to draw random covariance matrices to parameterize a multivariate normal distribution, then computing the density of the multivariate normal would generally require a Cholesky factor.
+Thus, it is useful to define the corresponding distributions of Cholesky factors.
 
 \subsection*{The Cholesky-Wishart distribution}
 
@@ -167,15 +164,25 @@ Similarly, if $U_B$ and $U_\Omega$ are the upper Cholesky factors of $B$ and $\O
 
 One could alternatively parameterize the Cholesky-inverse-Wishart distribution in terms of $U_\Sigma$ rather than $U_\Omega$, though this would increase the cost of computing the density.
 
-\section{Previous approaches to inverse-Wishart sampling}
+\section{Generating random inverse-Wishart matrices}
+
+\subsection{The standard approach}
 
 Random Wishart matrices are usually generated using the so-called Bartlett decomposition of the Cholesky factor of a Wishart matrix into the product of two Cholesky factors \parencite{bartlett_xxtheory_1934}.
-The resulting algorithm from \cite{smith_algorithm_1972} is summarized in \Cref{cholwishart}.
+The decomposition can be obtained by substituting $U_A = Z U_\Sigma$ for a Cholesky factor $Z$ into \Cref{cholwishartdensity}, yielding the following result:
+\begin{theorem}[{\cite[Theorem 3.2.14]{muirhead_aspects_1982}}]\label{cor:wishartbartlett}
+    Let $U_A = Z U_\Sigma$.
+    Then
+    \begin{equation}
+        z_{ij} \sim \begin{cases}\mathcal{N}(0, 1) & i < j\\ \chi_{n+1-j} & i = j\end{cases} \iff U_A \sim \cholwishart{m}(n, U_\Sigma).
+    \end{equation}
+\end{theorem}
+The resulting algorithm from \cite{smith_algorithm_1972} is summarized in \Cref{alg:rwishartchol}.
 
 \begin{algorithm}
-    \caption{Generate a Cholesky-Wishart-distributed matrix}\label{cholwishart}
+    \caption{Generate a Cholesky-Wishart matrix.}\label{alg:rwishartchol}
     \begin{algorithmic}[1]
-        \Function{rand\_chol\_wishart}{$m,n,U_\Sigma$}
+        \Function{rwishart\_chol}{$m,n,U_\Sigma$} \Comment{$\cholwishart{m}(n, U_\Sigma)$}
         \State $Z \gets \zeromat{m}{m}$
         \For{$j\in 1\ldots m$}
         \For{$i \in 1\ldots j-1$}
@@ -183,23 +190,23 @@ The resulting algorithm from \cite{smith_algorithm_1972} is summarized in \Cref{
         \EndFor
         \State Generate $z_{jj} \sim \chi_{n+1-j}$
         \EndFor \Comment{$Z \sim \cholwishart{m}(n, I_m)$}
-        \State $U_A \gets Z U_\Sigma$\Comment{$U_A \sim \cholwishart{m}(n, U_\Sigma)$}
+        \State $U_A \gets Z U_\Sigma$
         \State \textbf{return} $U_A$
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
 
-The standard algorithm for generating an inverse-Wishart matrix is to first generate a Wishart matrix using \Cref{cholwishart} and then compute the matrix inverse.
-As noted by \cite{jones_generating_1985}, this is most efficiently computed by inverting the Cholesky factor generated by \Cref{cholwishart}.
-The resulting sampling procedure is summarized in \Cref{invwishartfromwishart}.
-It uses \Cref{cholupper} to support all common parameterizations of the inverse-Wishart distribution.
+The standard algorithm for generating an inverse-Wishart matrix is to first generate a Wishart matrix using \Cref{alg:rwishartchol} and then compute the matrix inverse.
+As noted by \cite{jones_generating_1985}, this is most efficiently computed by inverting the Cholesky factor generated by \Cref{alg:rwishartchol}.
+The resulting sampling procedure is summarized in \Cref{alg:rinvwishartindirect}, where $\cholU(X)$ computes the upper Cholesky factor of the positive definite matrix $X$.
+It uses \Cref{alg:cholupper} to support all common parameterizations of the inverse-Wishart distribution.
 
 \begin{algorithm}
-    \caption{Compute the upper Cholesky factor of a positive definite matrix or its inverse from the matrix or its upper Cholesky factor.}\label{cholupper}
+    \caption{Compute the upper Cholesky factor of a positive definite matrix or its inverse from the matrix or its upper Cholesky factor.}\label{alg:cholupper}
     \begin{algorithmic}[1]
-        \Function{cholesky\_upper}{$S,\text{invert},\text{is\_cholU}$}
+        \Function{cholesky\_upper}{$S,\text{invert},\text{ischolU}$}
         \If{$\text{invert}$}
-        \If{$\text{is\_cholU}$}
+        \If{$\text{ischolU}$}
         \State $U \gets S$
         \Else
         \State $U \gets \cholU(S)$
@@ -208,7 +215,7 @@ It uses \Cref{cholupper} to support all common parameterizations of the inverse-
         \State $P \gets C C^\top$
         \State \textbf{return} $\cholU(P)$
         \Else
-        \If{$\text{is\_cholU}$}
+        \If{$\text{ischolU}$}
         \State \textbf{return} $S$
         \Else
         \State \textbf{return} $\cholU(S)$
@@ -219,14 +226,14 @@ It uses \Cref{cholupper} to support all common parameterizations of the inverse-
 \end{algorithm}
 
 \begin{algorithm}
-    \caption{Generate an inverse-Wishart matrix using \Cref{cholwishart}}\label{invwishartfromwishart}
+    \caption{Generate an inverse-Wishart matrix using \Cref{alg:rwishartchol}.}\label{alg:rinvwishartindirect}
     \begin{algorithmic}[1]
-        \Function{rand\_invwishart\_from\_wishart}{$m$,$n$,$S$,$\text{is\_cov}$,$\text{is\_cholU}$, $\text{\hspace{20.8em}ret\_cholU}$}
-        \State $U_\Sigma \gets \textproc{cholesky\_upper}(S, !\mathrm{is\_cov}, \mathrm{is\_cholU})$
-        \State Generate $U_A \sim \textproc{rand\_chol\_wishart}(m,n,U_\Sigma)$
+        \Function{rinvwishart\_indirect}{$m$,$n$,$S$,$\text{iscov}$,$\text{ischolU}$, $\text{retcholU}$}
+        \State $U_\Sigma \gets \textproc{cholesky\_upper}(S, !\mathrm{iscov}, \mathrm{ischolU})$
+        \State Generate $U_A \sim \textproc{rwishart\_chol}(m,n,U_\Sigma)$
         \State $V \gets U_A^{-1}$
         \State $B \gets V V^{\top}$
-        \If {$\text{ret\_cholU}$}
+        \If {$\text{retcholU}$}
         \State $T \gets \cholU(B)$
         \State \textbf{return} $T$
         \Else
@@ -236,18 +243,24 @@ It uses \Cref{cholupper} to support all common parameterizations of the inverse-
     \end{algorithmic}
 \end{algorithm}
 
-\section{A new approach to inverse-Wishart sampling}
+\subsection{A new approach}
 
 We propose a similar approach to a Bartlett decomposition for the inverse-Wishart distribution.
-Our goal is to compute the density of $Z= U_\Omega U_B^{-1}$ if $U_B$ is distributed according to $\cholinvwishart{m}(n, U_\Omega)$.
-Doing so requires the following theorem.
+Namely, we make the substitution $U_B = Z^{-1} U_\Omega$ for a Cholesky factor $Z$ into \Cref{cholinvwishartdensity}.
+Our goal then is to derive the density of $Z$ if $U_B$ is distributed according to $\cholinvwishart{m}(n, U_\Omega)$.
+\begin{theorem}\label{thm:invwishartbartlett}
+    Let $U_B \sim \cholinvwishart{m}(n, U_\Omega)$ and $U_B = Z^{-1} U_\Omega$.
+    Then $Z$ has the following density function with respect to $\dmeasure{Z}$:
+    \begin{equation}\label{invwishartbartlett}
+        p_Z(Z \mid n) \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=j}^m e^{-z_{ij}^2/2}.
+    \end{equation}
+\end{theorem}
 
-\begin{theorem}\label{triinvjac}
+Proving this result requires \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
+
+\begin{theorem}\label{thm:triinvjac}
     Let $T$ be an $m \times m$ invertible triangular matrix and $R=T^{-1}$.
-    Then
-    \[
-        \dmeasure{T} = \det{R}^{-(m+1)} \dmeasure{R}.
-    \]
+    Then $\dmeasure{T} = \det{R}^{-(m+1)} \dmeasure{R}$.
 \end{theorem}
 \begin{proof}
     We first differentiate the constraint $R T = I_m$:
@@ -270,7 +283,7 @@ Doing so requires the following theorem.
     \end{align*}
 \end{proof}
 
-\begin{lemma}\label{trimuldetjac}
+\begin{lemma}\label{lem:trimuldetjac}
     Let $Y = C X$, where $Y$, $C$, and $X$ are $m \times m$ triangular matrices, and $C$ is constant.
     Then $\dmeasure{Y} \propto \dmeasure{X}$.
 \end{lemma}
@@ -280,26 +293,11 @@ Doing so requires the following theorem.
 
 \begin{corollary}
     Let $U_B = Z^{-1} U_\Omega$.
-    Then \Cref{triinvjac} and \Cref{trimuldetjac} imply
-    \begin{equation}\label{ldivdetjac}
-        \dmeasure{U_B} \propto \det{Z}^{-m-1} \dmeasure{Z}.
-    \end{equation}
+    Then \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac} imply $\dmeasure{U_B} \propto \det{Z}^{-m-1} \dmeasure{Z}$.
 \end{corollary}
 
-The above results yield the following expression for the density of $Z$.
-
-\begin{theorem}
-    Let $U_B \sim \cholinvwishart{m}(n, U_\Omega)$ and $U_B = Z^{-1} U_\Omega$.
-    Then $Z$ has the following density function with respect to $\dmeasure{Z}$:
-    \begin{equation}\label{invwishartbartlett}
-        p_Z(Z \mid n) \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=j}^m e^{-z_{ij}^2/2}.
-    \end{equation}
-\end{theorem}
-\begin{proof}
-    First we note that
-    \[
-        (u_\Omega)_{jj} = z_{jj} (u_B)_{jj}.
-    \]
+\begin{proof}[\textbf{Proof of \Cref{thm:invwishartbartlett}}]
+    First we note that $(u_\Omega)_{jj} = z_{jj} (u_B)_{jj}$.
     Then we use the change of variables formula with the density \Cref{cholinvwishartdensity} and Jacobian determinant of \Cref{invwishartbartlett}:
     \begin{align*}
         p_Z(Z \mid n) & = p_{U_B}(Z^{-1} U_\Omega \mid n, U_\Omega) \det{Z}^{-m-1}                                                      \\
@@ -309,21 +307,21 @@ The above results yield the following expression for the density of $Z$.
     \end{align*}
 \end{proof}
 
-\begin{corollary}
+\begin{corollary}\label{cor:invwishartbartlett}
     Let $U_B = Z^{-1} U_\Omega$ as defined above.
     Then
     \begin{equation}
-        z_{ij} \sim \begin{cases}\mathcal{N}(0, 1) & i < j\\ \chi_{n-m+i} & i = j\end{cases} \implies U_B \sim \cholinvwishart{n}(U_\Omega).
+        z_{ij} \sim \begin{cases}\mathcal{N}(0, 1) & i < j\\ \chi_{n-m+j} & i = j\end{cases} \iff U_B \sim \cholinvwishart{m}(n, U_\Omega).
     \end{equation}
 \end{corollary}
 
-This motivates \Cref{algrandcholinvwishart} for generating a random inverse-Wishart Cholesky factor.
-We then use \Cref{algrandcholinvwishart} to construct \Cref{algrandinvwishartdirect} for generating random inverse-Wishart matrices.
+\Cref{cor:invwishartbartlett} motivates \Cref{alg:rinvwishartchol} for generating a random inverse-Wishart Cholesky factor.
+We then use \Cref{alg:rinvwishartchol} in \Cref{alg:rinvwishartdirect} for generating random inverse-Wishart matrices.
 
 \begin{algorithm}
-    \caption{Generate a Cholesky-inverse-Wishart-distributed matrix}\label{algrandcholinvwishart}
+    \caption{Generate a Cholesky-inverse-Wishart matrix.}\label{alg:rinvwishartchol}
     \begin{algorithmic}[1]
-        \Function{rand\_chol\_invwishart}{$m,n,U_\Omega$}
+        \Function{rinvwishart\_chol}{$m,n,U_\Omega$}\Comment{$\cholinvwishart{m}(n, U_\Omega)$}
         \State $Z \gets \zeromat{m}{m}$
         \For{$j\in 1\ldots m$}
         \For{$i\in 1\ldots j-1$}
@@ -332,19 +330,19 @@ We then use \Cref{algrandcholinvwishart} to construct \Cref{algrandinvwishartdir
         \State Generate $z_{jj} \sim \chi_{n-m+j}$
         \EndFor
         \State $C \gets Z^{-1}$ \Comment{$C \sim \cholinvwishart{m}(n, I_m)$}
-        \State $U_B \gets C U_\Omega$ \Comment{$U_B \sim \cholinvwishart{m}(n, U_\Omega)$}
+        \State $U_B \gets C U_\Omega$
         \State \textbf{return} $U_B$
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
 
 \begin{algorithm}
-    \caption{Generate an inverse-Wishart-distributed matrix}\label{algrandinvwishartdirect}
+    \caption{Generate an inverse-Wishart-distributed matrix.}\label{alg:rinvwishartdirect}
     \begin{algorithmic}[1]
-        \Function{rand\_invwishart\_direct}{$m$,$n$,$S$,$\text{is\_cov}$,$\text{is\_cholU}$,$\text{ret\_cholU}$}
-        \State $U_\Omega \gets \textproc{cholesky\_upper}(S, \text{is\_cov}, \text{is\_cholU})$
-        \State Generate $U_B \sim \textproc{rand\_chol\_invwishart}(m,n,U_\Omega)$
-        \If {$\text{ret\_cholU}$}
+        \Function{rinvwishart\_direct}{$m$,$n$,$S$,$\text{iscov}$,$\text{ischolU}$,$\text{retcholU}$}
+        \State $U_\Omega \gets \textproc{cholesky\_upper}(S, \text{iscov}, \text{ischolU})$
+        \State Generate $U_B \sim \textproc{rinvwishart\_chol}(m,n,U_\Omega)$
+        \If {$\text{retcholU}$}
         \State \textbf{return} $U_B$
         \Else
         \State $B \gets U_B^\top U_B$
@@ -361,7 +359,7 @@ We then use \Cref{algrandcholinvwishart} to construct \Cref{algrandinvwishartdir
     \small % Reduce font size
     \begin{tabular}{lccc|ccc}
         \toprule
-        \multirow{2}{*}{\parbox{1.5cm}{Parameter                               \\ ($S$)}} & \multicolumn{3}{c}{\Cref{invwishartfromwishart}} & \multicolumn{3}{c}{\Cref{algrandinvwishartdirect}} \\
+        \multirow{2}{*}{\parbox{1.5cm}{Parameter                               \\ ($S$)}} & \multicolumn{3}{c}{\Cref{alg:rinvwishartindirect}} & \multicolumn{3}{c}{\Cref{alg:rinvwishartdirect}} \\
         \cmidrule(lr){2-4} \cmidrule(lr){5-7}
                    & TRTRI  & TRMM   & POTRF     & TRTRI  & TRMM      & POTRF  \\
         \midrule
@@ -382,45 +380,18 @@ We then use \Cref{algrandcholinvwishart} to construct \Cref{algrandinvwishartdir
     \label{tab:alg_comparison}
 \end{table}
 
-Both \Cref{cholwishart} and \Cref{algrandcholinvwishart} require the same number and type of PRNG calls, so \Cref{invwishartfromwishart} and \Cref{algrandinvwishartdirect} primarily differ in the number of $\bigo(m^2)$ allocations (which can be eliminated by accepting and reusing storage) and in the number of $\bigo(m^3)$ linear algebraic operations.
+Both \Cref{alg:rwishartchol} and \Cref{alg:rinvwishartchol} require the same number and type of PRNG calls, so \Cref{alg:rinvwishartindirect} and \Cref{alg:rinvwishartdirect} primarily differ in the number of $\bigo(m^2)$ allocations (which can be eliminated by accepting and reusing storage) and in the number of $\bigo(m^3)$ linear algebraic operations.
 \Cref{tab:alg_comparison} gives the number of $\bigo(m^3)$ operations required by each algorithm, depending on the parameterization.
 
-If the scale matrix is specified as $\Sigma$ or $U_\Sigma$, then \Cref{invwishartfromwishart} is the most efficient, while \Cref{algrandinvwishartdirect} is more efficient if the scale matrix is specified as $\Omega$ or $U_\Omega$.
+If the scale matrix is specified as $\Sigma$ or $U_\Sigma$, then \Cref{alg:rinvwishartindirect} is the most efficient, while \Cref{alg:rinvwishartdirect} is more efficient if the scale matrix is specified as $\Omega$ or $U_\Omega$.
 The difference is more pronounced when generating random Cholesky factors, since for the standard algorithm, more work is necessary to compute the factor, while the new algorithm the Cholesky factor is already available.
 
-We therefore recommend \Cref{invwishartfromwishart} if the inverse-Wishart distribution is parameterized by $\Sigma$ or $U_\Sigma$ and \Cref{algrandinvwishartdirect} if parameterized by $\Omega$ or $U_\Omega$.
-
-%  [maybe overkill, but since all operations are cubic in existing and new algorithms, it's worth showing how big the decrease in constant factor is by avoiding Cholesky solves]
-
-
-%  [TODO: Summarize benchmark findings, give recommendations for implementation (BLAS/LAPACK), etc]
+We therefore recommend \Cref{alg:rinvwishartindirect} if the inverse-Wishart distribution is parameterized by $\Sigma$ or $U_\Sigma$ and \Cref{alg:rinvwishartdirect} if parameterized by $\Omega$ or $U_\Omega$.
 
 \subsection*{Acknowledgments}
 
 Seth Axen is a member of the Cluster of Excellence Machine Learning: New Perspectives for Science, University of Tübingen and is funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany’s Excellence Strategy – EXC number 2064/1 – Project number 390727645.
 
 \printbibliography
-
-\newpage
-
-% \begin{appendix}
-
-% \section{}
-
-% \begin{algorithm}
-%     \caption{Generate an inverse-Wishart-distributed matrix}\label{invwishartcombined}
-%     \begin{algorithmic}[1]
-%         \Function{rinvwishart}{$m,n,S,\text{is\_cov},\text{ischol}$}
-%         \If{$\text{is\_cov}$}
-%         \State Generate $B \sim \textproc{rinvwishartfromwishart}(m,n,S,\text{true},\text{ischol})$
-%         \Else
-%         \State Generate $B \sim \textproc{ralgrandinvwishartdirect}(m,n,S,\text{false},\text{ischol})$
-%         \EndIf
-%         \State \textbf{return} $B$
-%         \EndFunction
-%     \end{algorithmic}
-% \end{algorithm}
-
-% \end{appendix}
 
 \end{document}
