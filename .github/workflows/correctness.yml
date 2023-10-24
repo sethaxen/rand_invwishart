@@ -42,4 +42,4 @@ jobs:
           directories: RandomInverseWishart.jl/src  
       - uses: codecov/codecov-action@v3
         with:
-          files: RandomInverseWishart.jl/lcov.info
+          files: lcov.info
