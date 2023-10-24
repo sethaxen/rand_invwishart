@@ -33,7 +33,7 @@ function cholesky_upper!(
             return UpperTriangular(S)
         else
             tmp = _tmp === nothing ? similar(S) : _tmp
-            return cholesky!(copyto!(tmp, S)).U
+            return cholesky!(Symmetric(copyto!(tmp, S))).U
         end
     else
         tmp = _tmp === nothing ? similar(S) : _tmp
@@ -42,11 +42,11 @@ function cholesky_upper!(
             copyto!(tmp2, S)
             U = UpperTriangular(tmp2)
         else
-            U = cholesky!(copyto!(tmp2, S)).U
+            U = cholesky!(Symmetric(copyto!(tmp2, S))).U
         end
         C = LinearAlgebra.inv!(U)
         mul!(tmp, triu!(parent(C)), C')
-        return cholesky!(tmp).U
+        return cholesky!(Symmetric(tmp)).U
     end
 end
 
@@ -81,7 +81,7 @@ function rinvwishart_indirect!(
     triu!(V)
     mul!(B, V, UpperTriangular(V)')
     if retcholU
-        R = triu!(cholesky!(B).factors)
+        R = triu!(cholesky!(Symmetric(B)).factors)
         return R
     else
         return B
