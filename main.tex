@@ -58,8 +58,8 @@ The inverse-Wishart distribution is the conjugate prior for the covariance matri
 As a result, it is often used in Bayesian analyses [REF].
 It is derived from the Wishart distribution, which is the conjugate prior for the precision matrix of a multivariate normal distribution if the mean is known and is a key object of interest in random matrix theory.
 
-The standard algorithm \parencite{jones_generating_1985} for generating a random draw from the inverse-Wishart distribution, termed an inverse-Wishart matrix, first generates a draw from the Wishart distribution, termed a Wishart matrix, and inverts it.
-This approach is implemented in popular Python\footnote{\texttt{scipy.stats.invwishart}}, R\footnote{\texttt{LaplacesDemon::rinvwishart}, \texttt{MCMCpack::riwish}, and \texttt{mniw::riwish}}, and Julia\footnote{\texttt{Distributions.InverseWishart}} packages.
+The standard approach for generating a random draw from the inverse-Wishart distribution, termed an inverse-Wishart matrix, first generates a draw from the Wishart distribution, termed a Wishart matrix, and inverts it.
+Variants of this approach are implemented in popular Python\footnote{\texttt{scipy.stats.invwishart} (v1.11.3)}, R\footnote{\texttt{LaplacesDemon::rinvwishart} (v16.1.6), \texttt{MCMCpack::riwish} (v1.6-3), and \texttt{mniw::riwish} (v1.0.1)}, and Julia\footnote{\texttt{Distributions.InverseWishart}(v0.25.102)} packages.
 We present an algorithm that, for certain parameterizations of the inverse-Wishart distribution, is more efficient than the standard approach.
 
 \subsection*{Key definitions and notation}
