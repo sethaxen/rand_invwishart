@@ -248,11 +248,11 @@ It uses \Cref{alg:cholupper} to support all common parameterizations of the inve
 We propose a similar approach to a Bartlett decomposition for the inverse-Wishart distribution.
 Namely, we make the substitution $U_B = Z^{-1} U_\Omega$ for a Cholesky factor $Z$ into \Cref{cholinvwishartdensity}.
 Our goal then is to derive the density of $Z$ if $U_B$ is distributed according to $\cholinvwishart{m}(n, U_\Omega)$.
-\begin{theorem}\label{thm:invwishartbartlett}
+\begin{theorem}\label{thm:invwishartbartlettdensity}
     Let $U_B \sim \cholinvwishart{m}(n, U_\Omega)$ and $U_B = Z^{-1} U_\Omega$.
     Then $Z$ has the following density function with respect to $\dmeasure{Z}$:
     \begin{equation}\label{invwishartbartlett}
-        p_Z(Z \mid n) \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=j}^m e^{-z_{ij}^2/2}.
+        p_Z(Z \mid n) \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=1}^j e^{-z_{ij}^2/2}.
     \end{equation}
 \end{theorem}
 
@@ -296,14 +296,14 @@ Proving this result requires \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
     Then \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac} imply $\dmeasure{U_B} \propto \det{Z}^{-m-1} \dmeasure{Z}$.
 \end{corollary}
 
-\begin{proof}[\textbf{Proof of \Cref{thm:invwishartbartlett}}]
+\begin{proof}[\textbf{Proof of \Cref{thm:invwishartbartlettdensity}}]
     First we note that $(u_\Omega)_{jj} = z_{jj} (u_B)_{jj}$.
-    Then we use the change of variables formula with the density \Cref{cholinvwishartdensity} and Jacobian determinant of \Cref{invwishartbartlett}:
+    Then we use the change of variables formula with the density of \Cref{cholinvwishartdensity} and Jacobian determinant of \Cref{invwishartbartlett}:
     \begin{align*}
         p_Z(Z \mid n) & = p_{U_B}(Z^{-1} U_\Omega \mid n, U_\Omega) \det{Z}^{-m-1}                                                      \\
                       & \propto \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \det{Z}^{-m-1} \prod_{j=1}^m (u_B)_{jj}^{-(n+j)}         \\
                       & = \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \prod_{j=1}^m z_{jj}^{-m-1} z_{jj}^{n+j} (u_\Omega)_{jj}^{n+j} \\
-                      & \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=j}^m e^{-z_{ij}^2/2}
+                      & \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=1}^j e^{-z_{ij}^2/2}
     \end{align*}
 \end{proof}
 
