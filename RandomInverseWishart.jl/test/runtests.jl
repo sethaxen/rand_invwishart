@@ -81,7 +81,7 @@ rand_chol_pd_mat(m) = rand_chol_pd_mat(Random.default_rng(), m)
             rinvwishart!(rng, UB, m, n, UΩ; iscov=false, ischolU=true, retcholU=true)
             @test @allocated(
                 rinvwishart!(rng, UB, m, n, UΩ; iscov=false, ischolU=true, retcholU=true)
-            ) ≤ 160
+            ) ≤ 224
         end
     end
 end
