@@ -109,6 +109,7 @@ While the two parameterizations are equivalent, the choice of parameterization c
 \subsection*{Summary of contributions}
 
 This paper's main contribution is \Cref{alg:rinvwishartchol} for efficiently generating a random Cholesky factor of a inverse-Wishart matrix without performing a Cholesky factorization.
+\sloppy
 \Cref{alg:rinvwishartdirect} uses this algorithm to efficiently generate an inverse-Wishart matrix.
 In \Cref{algcomp} we compare the new and standard algorithm and recommend which to use depending on the parameterization of the inverse-Wishart distribution.
 
@@ -120,6 +121,7 @@ Thus, it is useful to define the corresponding distributions of Cholesky factors
 
 \subsection*{The Cholesky-Wishart distribution}
 
+\sloppy
 Let $U_A$ and $U_\Sigma$ be the upper Cholesky factors of $A$ and $\Sigma$, respectively.
 Then $U_A$ is distributed according to the Cholesky-Wishart distribution $\cholwishart{m}(n, U_\Sigma)$.
 \Cref{thm:choleskydetjac} allows us to derive the density of this distribution in \Cref{thm:cholwishartdensity}.
