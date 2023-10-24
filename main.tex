@@ -7,6 +7,7 @@
 \usepackage{hyperref}
 \usepackage[nameinlink]{cleveref}
 \usepackage{xcolor}
+\definecolor{medium-gray}{gray}{0.45} 
 
 \usepackage{algorithm}
 \usepackage{algpseudocodex}
@@ -55,12 +56,12 @@
 \section{Introduction}
 
 The inverse-Wishart distribution is the conjugate prior for the covariance matrix of a multivariate normal distribution if the mean is known.
-As a result, it is often used in Bayesian analyses [REF].
+As a result, it is often used in Bayesian analyses \parencite{gelman_bayesian_2013,hoff_multivariate_2009}.
 It is derived from the Wishart distribution, which is the conjugate prior for the precision matrix of a multivariate normal distribution if the mean is known and is a key object of interest in random matrix theory.
 
 The standard approach for generating a random draw from the inverse-Wishart distribution, termed an inverse-Wishart matrix, first generates a draw from the Wishart distribution, termed a Wishart matrix, and inverts it.
 Variants of this approach are implemented in popular Python\footnote{\texttt{scipy.stats.invwishart} (v1.11.3)}, R\footnote{\texttt{LaplacesDemon::rinvwishart} (v16.1.6), \texttt{MCMCpack::riwish} (v1.6-3), and \texttt{mniw::riwish} (v1.0.1)}, and Julia\footnote{\texttt{Distributions.InverseWishart}(v0.25.102)} packages.
-We present an algorithm that, for certain parameterizations of the inverse-Wishart distribution, is more efficient than the standard approach.
+We present an alternative algorithm that, for certain parameterizations of the inverse-Wishart distribution, is more efficient than the standard approach.
 
 \subsection*{Key definitions and notation}
 
@@ -78,15 +79,15 @@ where $\wedge$ is the exterior (or wedge) product with the antisymmetric propert
 
 Let $X = f(Y)$, where $f$ is a diffeomorphic (smooth, one-to-one function) function.
 Then $\dmeasure{X} = \det{J_f} \dmeasure{Y}$, where $J_f$ is the Jacobian of $f$ at $Y$.
-If $p_X(X)$ is then an absolutely continuous density with respect to $\dmeasure{X}$, then the change of variables formula gives the corresponding density of $Y$ with respect to $\dmeasure{Y}$ as
+If $p_X(X)$ is an absolutely continuous density with respect to $\dmeasure{X}$, then the change of variables formula gives the corresponding density of $Y$ with respect to $\dmeasure{Y}$ as
 \[
     p_Y(Y) = p_X(f(Y)) \det{J_f}.
 \]
 
 \subsection*{The Wishart distribution}
 
-Let $Z$ be an $m \times n$ matrix whose $i$th column $Z_i \sim \mathcal{N}(0, \Sigma)$, where the scale matrix $\Sigma$ is an $m \times m$ positive definite matrix.
-Then the $m \times m$ positive definite matrix $W = Z Z^\top$ is distributed according to the Wishart distribution $\wishart{m}(n, \Sigma)$, where $n$ is termed the degrees of freedom.
+Let $Z$ be an $m \times n$ matrix whose $i$th column $Y_i \sim \mathcal{N}(0, \Sigma)$, where the scale matrix $\Sigma$ is an $m \times m$ positive definite matrix.
+Then the $m \times m$ positive definite matrix $A = Y Y^\top$ is distributed according to the Wishart distribution $\wishart{m}(n, \Sigma)$, where $n$ is termed the degrees of freedom.
 This paper considers only the case where $n > m-1$, so that $A$ is nonsingular.
 The density of this Wishart distribution with respect to $\dmeasure{A}$ is \parencite[Theorem 3.2.1]{muirhead_aspects_1982}
 \begin{equation}\label{wishartdensity}
@@ -121,24 +122,24 @@ Thus, it is useful to define the corresponding distributions of Cholesky factors
 
 Let $U_A$ and $U_\Sigma$ be the upper Cholesky factors of $A$ and $\Sigma$, respectively.
 Then $U_A$ is distributed according to the Cholesky-Wishart distribution $\cholwishart{m}(n, U_\Sigma)$.
-\Cref{choleskydetjac} allows us to write down the density of this distribution.
+\Cref{thm:choleskydetjac} allows us to derive the density of this distribution in \Cref{thm:cholwishartdensity}.
 
-\begin{theorem}[{\cite[Theorem 2.1.9]{muirhead_aspects_1982}}]
+\begin{theorem}[{\cite[Theorem 2.1.9]{muirhead_aspects_1982}}]\label{thm:choleskydetjac}
     Let $X$ be an $m \times m$ positive definite matrix and $T$ be its upper Cholesky factor.
     Then
-    \begin{equation}\label{choleskydetjac}
+    \begin{equation}\label{eq:choleskydetjac}
         \dmeasure{X} = 2^m \left(\prod_{j=1}^m t_{jj}^{m+1-j} \right) \dmeasure{T}.
     \end{equation}
 \end{theorem}
 
-\begin{theorem}[Cholesky-Wishart density]
+\begin{theorem}[Cholesky-Wishart density]\label{thm:cholwishartdensity}
     The density of $\cholwishart{m}(n, U_\Sigma)$ with respect to $\dmeasure{U_A} $ is
-    \begin{equation}\label{cholwishartdensity}
+    \begin{equation}\label{eq:cholwishartdensity}
         p_{U_A}(U_A \mid n, U_\Sigma) \propto \exp\left(-\frac{1}{2}\lVert U_A U_\Sigma^{-1} \rVert^2\right) \prod_{j=1}^m (u_A)_{jj}^{n-j}.
     \end{equation}
 \end{theorem}
 \begin{proof}
-    From \Cref{wishartdensity} and \Cref{choleskydetjac}, and using the change of variables formula,
+    From \Cref{wishartdensity} and \Cref{eq:choleskydetjac}, and using the change of variables formula,
     \begin{align*}
         p_{U_A}(U_A \mid n, U_\Sigma) & \propto \exp\left(-\frac{1}{2}\tr((U_\Sigma^\top U_\Sigma)^{-1} U_A^\top U_A)\right) \det{U_A}^{n-m-1} \prod_{j=1}^m (u_A)_{jj}^{m+1-j} \\
                                       & = \exp\left(-\frac{1}{2}\tr(U_\Sigma^{-1} U_\Sigma^{-\top} U_A^\top U_A)\right) \prod_{j=1}^m (u_A)_{jj}^{n-j}.
@@ -159,7 +160,7 @@ Similarly, if $U_B$ and $U_\Omega$ are the upper Cholesky factors of $B$ and $\O
     \end{equation}
 \end{theorem}
 \begin{proof}
-    Starting from \Cref{invwishartdensity} and \Cref{choleskydetjac}, the proof follows the same steps as that of \Cref{cholwishartdensity}.
+    Starting from \Cref{invwishartdensity} and \Cref{eq:choleskydetjac}, the proof follows the same steps as that of \Cref{thm:cholwishartdensity}.
 \end{proof}
 
 One could alternatively parameterize the Cholesky-inverse-Wishart distribution in terms of $U_\Sigma$ rather than $U_\Omega$, though this would increase the cost of computing the density.
@@ -168,9 +169,8 @@ One could alternatively parameterize the Cholesky-inverse-Wishart distribution i
 
 \subsection{The standard approach}
 
-Random Wishart matrices are usually generated using the so-called Bartlett decomposition of the Cholesky factor of a Wishart matrix into the product of two Cholesky factors \parencite{bartlett_xxtheory_1934}.
-The decomposition can be obtained by substituting $U_A = Z U_\Sigma$ for a Cholesky factor $Z$ into \Cref{cholwishartdensity}, yielding the following result:
-\begin{theorem}[{\cite[Theorem 3.2.14]{muirhead_aspects_1982}}]\label{cor:wishartbartlett}
+Random Wishart matrices are usually generated using the so-called Bartlett decomposition of the Cholesky factor of a Wishart matrix into the product of two Cholesky factors \parencite{bartlett_xxtheory_1934}:
+\begin{theorem}[{\cite[Theorem 3.2.14]{muirhead_aspects_1982}}]\label{thm:wishartbartlett}
     Let $U_A = Z U_\Sigma$.
     Then
     \begin{equation}
@@ -245,18 +245,16 @@ It uses \Cref{alg:cholupper} to support all common parameterizations of the inve
 
 \subsection{A new approach}
 
-We propose a similar approach to a Bartlett decomposition for the inverse-Wishart distribution.
-Namely, we make the substitution $U_B = Z^{-1} U_\Omega$ for a Cholesky factor $Z$ into \Cref{cholinvwishartdensity}.
-Our goal then is to derive the density of $Z$ if $U_B$ is distributed according to $\cholinvwishart{m}(n, U_\Omega)$.
-\begin{theorem}\label{thm:invwishartbartlettdensity}
-    Let $U_B \sim \cholinvwishart{m}(n, U_\Omega)$ and $U_B = Z^{-1} U_\Omega$.
-    Then $Z$ has the following density function with respect to $\dmeasure{Z}$:
-    \begin{equation}\label{invwishartbartlett}
-        p_Z(Z \mid n) \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=1}^j e^{-z_{ij}^2/2}.
+We present a similar decomposition to Bartlett's for the inverse-Wishart distribution:
+\begin{theorem}\label{thm:invwishartbartlett}
+    Let $U_B = Z^{-1} U_\Omega$.
+    Then
+    \begin{equation}
+        z_{ij} \sim \begin{cases}\mathcal{N}(0, 1) & i < j\\ \chi_{n-m+j} & i = j\end{cases} \iff U_B \sim \cholinvwishart{m}(n, U_\Omega).
     \end{equation}
 \end{theorem}
 
-Proving this result requires \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
+To prove this result, we first work out the necessary Jacobian determinants in \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
 
 \begin{theorem}\label{thm:triinvjac}
     Let $T$ be an $m \times m$ invertible triangular matrix and $R=T^{-1}$.
@@ -265,16 +263,16 @@ Proving this result requires \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
 \begin{proof}
     We first differentiate the constraint $R T = I_m$:
     \[
-        \dd{R} T + \dd{R} T = \zeromat{m}{m} \implies \dd{T} = -T \dd{R}T
+        \dd{R} T + R \dd{T} = 0 \implies \dd{T} = -T \dd{R}T
     \]
     Now we inspect the elements of $\dd{T}$:
     \begin{align*}
-        -\dd{t}_{ij} & = \sum_{k=1}^m \sum_{l=1}^m t_{ik} \dd{r}_{kl} t_{lj} = \sum_{k=1}^i \sum_{l=k}^j t_{ik} t_{lj} \dd{r}_{kl}                                  \\
-        -\dd{t}_{11} & = t_{11} t_{11} \dd{r}_{11}                                                                                                                  \\
-        -\dd{t}_{12} & = t_{11} t_{22} \dd{r}_{12} + \textcolor{gray}{t_{11} t_{12} \dd{r}_{11}}                                                                    \\
-        -\dd{t}_{22} & = t_{22} t_{22} \dd{r}_{22} + \textcolor{gray}{t_{21} t_{22} \dd{r}_{12} + t_{21} t_{12} \dd{r}_{11}}                                        \\
-        \vdots \ \   &                                                                                                                                              \\
-        -\dd{t}_{ij} & = t_{ii} t_{jj}\dd{r}_{ij} + \textcolor{gray}{\text{terms involving } \dd{r}_{kl} \text{ for } l < j \text{ or } (l = j \text{ and } k < i)}
+        -\dd{t}_{ij} & = \sum_{k=1}^m \sum_{l=1}^m t_{ik} \dd{r}_{kl} t_{lj} = \sum_{k=1}^i \sum_{l=k}^j t_{ik} t_{lj} \dd{r}_{kl}                                         \\
+        -\dd{t}_{11} & = t_{11} t_{11} \dd{r}_{11}                                                                                                                         \\
+        -\dd{t}_{12} & = t_{11} t_{22} \dd{r}_{12} + \textcolor{medium-gray}{t_{11} t_{12} \dd{r}_{11}}                                                                    \\
+        -\dd{t}_{22} & = t_{22} t_{22} \dd{r}_{22} + \textcolor{medium-gray}{t_{21} t_{22} \dd{r}_{12} + t_{21} t_{12} \dd{r}_{11}}                                        \\
+        \vdots \ \   &                                                                                                                                                     \\
+        -\dd{t}_{ij} & = t_{ii} t_{jj}\dd{r}_{ij} + \textcolor{medium-gray}{\text{terms involving } \dd{r}_{kl} \text{ for } l < j \text{ or } (l = j \text{ and } k < i)}
     \end{align*}
     By the antisymmetric property of the exterior product, $\dd{t}_{ij} \wedge \dd{t}_{ij} = 0$, so if we take the exterior product of all expressions for $\dd{t}_{ij}$ given above starting with $\dd{t}_{11}$ and working down, only the leading terms $t_{ii} t_{jj} \dd{r}_{ij}$ remain:
     \begin{align*}
@@ -293,30 +291,25 @@ Proving this result requires \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac}.
 
 \begin{corollary}
     Let $U_B = Z^{-1} U_\Omega$.
-    Then \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac} imply $\dmeasure{U_B} \propto \det{Z}^{-m-1} \dmeasure{Z}$.
-\end{corollary}
-
-\begin{proof}[\textbf{Proof of \Cref{thm:invwishartbartlettdensity}}]
-    First we note that $(u_\Omega)_{jj} = z_{jj} (u_B)_{jj}$.
-    Then we use the change of variables formula with the density of \Cref{cholinvwishartdensity} and Jacobian determinant of \Cref{invwishartbartlett}:
-    \begin{align*}
-        p_Z(Z \mid n) & = p_{U_B}(Z^{-1} U_\Omega \mid n, U_\Omega) \det{Z}^{-m-1}                                                      \\
-                      & \propto \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \det{Z}^{-m-1} \prod_{j=1}^m (u_B)_{jj}^{-(n+j)}         \\
-                      & = \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \prod_{j=1}^m z_{jj}^{-m-1} z_{jj}^{n+j} (u_\Omega)_{jj}^{n+j} \\
-                      & \propto \prod_{j=1}^m z_{jj}^{n-m+j-1} \prod_{i=1}^j e^{-z_{ij}^2/2}
-    \end{align*}
-\end{proof}
-
-\begin{corollary}\label{cor:invwishartbartlett}
-    Let $U_B = Z^{-1} U_\Omega$ as defined above.
-    Then
-    \begin{equation}
-        z_{ij} \sim \begin{cases}\mathcal{N}(0, 1) & i < j\\ \chi_{n-m+j} & i = j\end{cases} \iff U_B \sim \cholinvwishart{m}(n, U_\Omega).
+    Then \Cref{thm:triinvjac} and \Cref{lem:trimuldetjac} imply
+    \begin{equation}\label{eq:trildivdetjac}
+        \dmeasure{U_B} \propto \det{Z}^{-m-1} \dmeasure{Z}.
     \end{equation}
 \end{corollary}
 
-\Cref{cor:invwishartbartlett} motivates \Cref{alg:rinvwishartchol} for generating a random inverse-Wishart Cholesky factor.
-We then use \Cref{alg:rinvwishartchol} in \Cref{alg:rinvwishartdirect} for generating random inverse-Wishart matrices.
+\begin{proof}[\textbf{Proof of \Cref{thm:invwishartbartlett}}]
+    First we note that $(u_\Omega)_{jj} = z_{jj} (u_B)_{jj}$.
+    Then we use the change of variables formula with the density of \Cref{cholinvwishartdensity} and Jacobian determinant of \Cref{eq:trildivdetjac} and simplify:
+    \begin{align*}
+        p_Z(Z \mid n) & = p_{U_B}(Z^{-1} U_\Omega \mid n, U_\Omega) \det{Z}^{-m-1}                                                                         \\
+                      & \propto \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \det{Z}^{-m-1} \prod_{j=1}^m (u_B)_{jj}^{-(n+j)}                            \\
+                      & = \exp\left(-\frac{1}{2}\lVert Z \rVert^2\right) \prod_{j=1}^m z_{jj}^{-m-1} z_{jj}^{n+j} (u_\Omega)_{jj}^{n+j}                    \\
+                      & \propto \left(\prod_{j=1}^m z_{jj}^{n-m+j-1} e^{-z_{jj}^2/2}\right) \left(\prod_{j=2}^m \prod_{i=1}^{j-1} e^{-z_{ij}^2/2}\right)   \\
+                      & \propto \left(\prod_{j=1}^m \chi_{n-m+j}(z_{jj})\right) \left(\prod_{j=2}^m \prod_{i=1}^{j-1} \mathcal{N}(z_{ij} \mid 0, 1)\right)
+    \end{align*}
+\end{proof}
+
+\Cref{thm:invwishartbartlett} motivates \Cref{alg:rinvwishartchol} for generating a random inverse-Wishart Cholesky factor, which we then use in \Cref{alg:rinvwishartdirect} for generating random inverse-Wishart matrices.
 
 \begin{algorithm}
     \caption{Generate a Cholesky-inverse-Wishart matrix.}\label{alg:rinvwishartchol}
@@ -383,8 +376,8 @@ We then use \Cref{alg:rinvwishartchol} in \Cref{alg:rinvwishartdirect} for gener
 Both \Cref{alg:rwishartchol} and \Cref{alg:rinvwishartchol} require the same number and type of PRNG calls, so \Cref{alg:rinvwishartindirect} and \Cref{alg:rinvwishartdirect} primarily differ in the number of $\bigo(m^2)$ allocations (which can be eliminated by accepting and reusing storage) and in the number of $\bigo(m^3)$ linear algebraic operations.
 \Cref{tab:alg_comparison} gives the number of $\bigo(m^3)$ operations required by each algorithm, depending on the parameterization.
 
-If the scale matrix is specified as $\Sigma$ or $U_\Sigma$, then \Cref{alg:rinvwishartindirect} is the most efficient, while \Cref{alg:rinvwishartdirect} is more efficient if the scale matrix is specified as $\Omega$ or $U_\Omega$.
-The difference is more pronounced when generating random Cholesky factors, since for the standard algorithm, more work is necessary to compute the factor, while the new algorithm the Cholesky factor is already available.
+If the parameter is specified as $\Sigma$ or $U_\Sigma$, then \Cref{alg:rinvwishartindirect} is the most efficient, while \Cref{alg:rinvwishartdirect} is more efficient if the parameter is specified as $\Omega$ or $U_\Omega$.
+The difference is more pronounced when generating random Cholesky factors, since for the standard algorithm, more work is necessary to compute the factor, while for the new algorithm the Cholesky factor is already available.
 
 We therefore recommend \Cref{alg:rinvwishartindirect} if the inverse-Wishart distribution is parameterized by $\Sigma$ or $U_\Sigma$ and \Cref{alg:rinvwishartdirect} if parameterized by $\Omega$ or $U_\Omega$.
 
