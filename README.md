@@ -13,5 +13,4 @@ This repository contains the paper text and reference implementations for the pa
 }
 ```
 
-For the paper, see the `paper` subdirectory or [arXiv]().
-For the reference implementations, see the [`RandomInverseWishart.jl`](./RandomInverseWishart.jl) subdirectory.
+For the paper, see the `paper` subdirectory or [arXiv:2310.15884](https://arxiv.org/abs/2310.15884). For the reference implementations, see the [`RandomInverseWishart.jl`](./RandomInverseWishart.jl) subdirectory.
